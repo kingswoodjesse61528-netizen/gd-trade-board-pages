@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>广东电力交易看板</title>
+<meta name="description" content="广东电力交易中心公众号：月度中长期交易通报 + 现货市场运行日报，自动归档与趋势图">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f5f2; --surface:#fcfcfb; --surface-2:#f0efec; --border:#e3e1dc;
+  --text:#0b0b0b; --text-2:#52514e; --text-3:#8a8984;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --grid:#ebe9e4; --good:#1a7f37; --bad:#c62828; --warn:#b26a00;
+  --seq-lo:#cde2fb; --seq-hi:#0d366b;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#33332f;
+    --text:#ffffff; --text-2:#c3c2b7; --text-3:#8d8c84;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --grid:#2b2b28; --good:#4cc26a; --bad:#ff6b6b; --warn:#e0a030;
+    --seq-lo:#1f2a38; --seq-hi:#86b6ef;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#33332f;
+  --text:#ffffff; --text-2:#c3c2b7; --text-3:#8d8c84;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --grid:#2b2b28; --good:#4cc26a; --bad:#ff6b6b; --warn:#e0a030;
+  --seq-lo:#1f2a38; --seq-hi:#86b6ef;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px;margin-bottom:14px}
+h1{font-size:22px;margin:0;letter-spacing:.5px}
+.sub{color:var(--text-2);font-size:12.5px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:6px 0 16px;overflow-x:auto}
+.tab{appearance:none;border:0;background:none;color:var(--text-2);font:inherit;font-size:15px;
+  padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--text);font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px}
+.filters .lbl{color:var(--text-3);font-size:12.5px;margin-right:4px}
+.chip{appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--text-2);
+  font:inherit;font-size:13px;padding:4px 11px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;min-width:0}
+.kpi .k{color:var(--text-2);font-size:12.5px}
+.kpi .v{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;margin:2px 0;letter-spacing:-.3px}
+.kpi .v small{font-size:13px;font-weight:400;color:var(--text-3);margin-left:3px}
+.kpi .d{font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.up{color:var(--bad)} .down{color:var(--good)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 14px 8px;margin-bottom:12px;min-width:0}
+.card h3{margin:0 0 2px;font-size:15px}
+.card .note{color:var(--text-3);font-size:12px;margin:0 0 6px}
+.chart{width:100%;height:300px}
+.chart.tall{height:340px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+th{color:var(--text-2);font-weight:500;background:var(--surface-2);position:sticky;top:0}
+td:first-child,th:first-child{text-align:left}
+a{color:var(--s1);text-decoration:none} a:hover{text-decoration:underline}
+details{margin-top:4px} summary{cursor:pointer;color:var(--text-2);font-size:12.5px;padding:4px 0}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:360px}
+.cal div{font-size:12px;text-align:center;padding:5px 0;border-radius:5px;background:var(--surface-2);color:var(--text-3)}
+.cal .has{background:var(--s1);color:#fff}
+.cal .warn{outline:2px solid var(--warn);outline-offset:-2px}
+.cal .hd{background:none;color:var(--text-3)}
+.badge{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--border);color:var(--text-2)}
+.badge.warn{border-color:var(--warn);color:var(--warn)}
+.hidden{display:none}
+.foot{color:var(--text-3);font-size:12px;margin-top:20px;line-height:1.7}
+@media (max-width:760px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid2{grid-template-columns:1fr}
+  .kpi .v{font-size:22px}
+  .chart{height:260px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>广东电力交易看板</h1>
+      <div class="sub">数据源：广东电力交易中心公众号（月度中长期通报 · 现货运行日报）</div>
+    </div>
+    <div class="sub" id="updated">加载中…</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="daily" aria-selected="true">现货日报</button>
+    <button class="tab" role="tab" data-tab="monthly" aria-selected="false">月度中长期</button>
+    <button class="tab" role="tab" data-tab="archive" aria-selected="false">数据档案</button>
+  </nav>
+
+  <!-- ───────── 现货日报 ───────── -->
+  <section id="tab-daily">
+    <div class="filters" id="monthChips"><span class="lbl">月份</span></div>
+    <div class="kpis" id="dailyKpis"></div>
+    <div class="card">
+      <h3>日前成交均价（按运行日）</h3>
+      <p class="note">元/兆瓦时 · 虚线为当月中长期「月度综合价」，用来对照现货与合约价差 · 缺日为断点（未取到日报）</p>
+      <div class="chart tall" id="cDa"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>同一运行日：日前 vs 实时（发电侧）</h3>
+        <p class="note">元/兆瓦时 · 实时数据滞后 2 天发布（D 日日报含 D-2 实时）</p>
+        <div class="chart" id="cRt"></div>
+      </div>
+      <div class="card">
+        <h3>发电侧日前申报结构</h3>
+        <p class="note">申报容量占比 % · 零价及以下多=新能源大发；600 以上多=顶峰报价</p>
+        <div class="chart" id="cDecl"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>24 小时日前价格热力（发电机组含核电）</h3>
+        <p class="note">点击某一天查看右侧曲线 · 数值由日报图 4 像素估读，误差约 ±5 元</p>
+        <div class="chart tall" id="cHeat"></div>
+      </div>
+      <div class="card">
+        <h3 id="curveTitle">单日 24 小时价格曲线</h3>
+        <p class="note">元/兆瓦时 · 图像估读值，仅供形态参考，非官方结算数据</p>
+        <div class="chart tall" id="cCurve"></div>
+      </div>
+    </div>
+    <details class="card"><summary>查看本月日报数据表</summary><div class="tbl-wrap" id="dailyTable"></div></details>
+  </section>
+
+  <!-- ───────── 月度中长期 ───────── -->
+  <section id="tab-monthly" class="hidden">
+    <div class="kpis" id="monthlyKpis"></div>
+    <div class="card">
+      <h3>月度中长期价格走势</h3>
+      <p class="note">厘/千瓦时（= 元/兆瓦时）· 2026 年 5 月起价格脱离 372 基准附近</p>
+      <div class="chart tall" id="mPrice"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>分电源类型月度成交均价</h3>
+        <p class="note">厘/千瓦时</p>
+        <div class="chart" id="mSrc"></div>
+      </div>
+      <div class="card">
+        <h3>月度成交电量构成</h3>
+        <p class="note">亿千瓦时 · 堆叠</p>
+        <div class="chart" id="mVol"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>中长期 vs 现货（月均）</h3>
+        <p class="note">元/兆瓦时 · 现货月均为已取到日报的算术平均，覆盖天数不足时仅作参考</p>
+        <div class="chart" id="mVsSpot"></div>
+      </div>
+      <div class="card">
+        <h3>绿电环境价值月度均价</h3>
+        <p class="note">厘/千瓦时 · 综合双边协商与挂牌/集中交易</p>
+        <div class="chart" id="mGreen"></div>
+      </div>
+    </div>
+    <details class="card"><summary>查看月度通报数据表</summary><div class="tbl-wrap" id="monthlyTable"></div></details>
+  </section>
+
+  <!-- ───────── 数据档案 ───────── -->
+  <section id="tab-archive" class="hidden">
+    <div class="grid2">
+      <div class="card">
+        <h3>日报覆盖日历</h3>
+        <p class="note">蓝=已入库；橙框=OCR 有警告需复核；灰=缺失（可手机转发到收藏工具，或运行 add 补录）</p>
+        <div class="filters" id="calChips"></div>
+        <div id="cal"></div>
+      </div>
+      <div class="card">
+        <h3>月度通报</h3>
+        <div class="tbl-wrap" id="monthlyLinks"></div>
+      </div>
+    </div>
+    <div class="card"><h3>现货日报原文</h3><div class="tbl-wrap" id="dailyLinks"></div></div>
+  </section>
+
+  <div class="foot">
+    口径说明：日报为交易中心「快报数据，非最终正式结算数据」；数值由 OCR 自动提取并做「最低≤平均≤最高」「段落与表格一致」校验。
+    中长期通报中，年度合同均价、月度双边协商均价及月度综合价统计时，同一集团发电企业与售电公司的双边电量按 25% 权重计算。
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  var DATA = null, charts = {}, state = {tab:'daily', month:null, day:null};
+  var $ = function(id){ return document.getElementById(id); };
+  function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function fmt(v, d){ return v == null ? '—' : Number(v).toFixed(d == null ? 2 : d); }
+  function avg(a){ a = a.filter(function(x){ return x != null; }); return a.length ? a.reduce(function(s,x){return s+x;},0)/a.length : null; }
+
+  function base(){
+    return {
+      animation:false,
+      textStyle:{fontFamily:'inherit', color:css('--text-2')},
+      grid:{left:48, right:118, top:36, bottom:30, containLabel:false},
+      legend:{top:0, left:0, itemWidth:14, itemHeight:3, icon:'rect', textStyle:{color:css('--text-2'), fontSize:12}},
+      tooltip:{trigger:'axis', backgroundColor:css('--surface'), borderColor:css('--border'),
+        textStyle:{color:css('--text'), fontSize:12.5}, axisPointer:{type:'line', lineStyle:{color:css('--text-3'), width:1}},
+        valueFormatter:function(v){ return v == null ? '—' : Number(v).toFixed(2); }},
+      xAxis:{type:'category', axisLine:{lineStyle:{color:css('--border')}}, axisTick:{show:false},
+        axisLabel:{color:css('--text-3'), fontSize:11.5}},
+      yAxis:{type:'value', scale:true, splitLine:{lineStyle:{color:css('--grid')}},
+        axisLabel:{color:css('--text-3'), fontSize:11.5}}
+    };
+  }
+  // 2px 线、≥8px 悬停标记、线尾直接标注（浅色模式下青/黄对比度不足 3:1，必须有文字标注补偿）
+  function line(name, data, color, extra){
+    return Object.assign({
+      name:name, type:'line', data:data, connectNulls:false, showSymbol:false, symbolSize:8,
+      lineStyle:{width:2, color:color}, itemStyle:{color:color},
+      emphasis:{focus:'series'},
+      labelLayout:{moveOverlap:'shiftY'},
+      endLabel:{show:true, color:css('--text-2'), fontSize:11.5,
+        formatter:function(p){ return p.value == null ? '' : p.seriesName + ' ' + Number(Array.isArray(p.value)?p.value[1]:p.value).toFixed(0); }}
+    }, extra || {});
+  }
+  function chart(id){
+    if (!charts[id]) charts[id] = echarts.init($(id), null, {renderer:'svg'});
+    return charts[id];
+  }
+
+  // ───────── 现货日报 ─────────
+  function monthsOfDaily(){
+    var s = {}; DATA.daily.forEach(function(d){ s[d.date.slice(0,7)] = 1; });
+    return Object.keys(s).sort();
+  }
+  function daysIn(ym){
+    var y = +ym.slice(0,4), m = +ym.slice(5,7), n = new Date(y, m, 0).getDate(), out = [];
+    for (var i = 1; i <= n; i++) out.push(ym + '-' + (i < 10 ? '0' : '') + i);
+    return out;
+  }
+  function monthlyRec(ym){ return DATA.monthly.filter(function(m){ return m.ym === ym; })[0]; }
+
+  function renderMonthChips(){
+    var box = $('monthChips'); box.querySelectorAll('.chip').forEach(function(c){ c.remove(); });
+    monthsOfDaily().forEach(function(ym){
+      var b = document.createElement('button');
+      b.className = 'chip'; b.textContent = ym.replace('-', '年') + '月';
+      b.setAttribute('aria-pressed', ym === state.month);
+      b.onclick = function(){ state.month = ym; state.day = null; renderDaily(); };
+      box.appendChild(b);
+    });
+  }
+
+  function renderDaily(){
+    renderMonthChips();
+    var ym = state.month, days = daysIn(ym);
+    var byDate = {}; DATA.daily.forEach(function(d){ byDate[d.date] = d; });
+    var rows = days.map(function(d){ return byDate[d] || null; });
+    var label = days.map(function(d){ return +d.slice(8); + ''; }).map(function(x){ return x + '日'; });
+    var mr = monthlyRec(ym);
+    var have = rows.filter(Boolean);
+    var last = have[have.length - 1];
+
+    // KPI
+    var mtd = avg(have.map(function(r){ return r.da['发电侧']; }));
+    var lastRt = have.slice().reverse().filter(function(r){ return r.rt['发电侧'] != null; })[0];
+    var prev = have.length > 1 ? have[have.length - 2] : null;
+    function delta(a, b){
+      if (a == null || b == null) return '—';
+      var x = a - b; return '<span class="' + (x >= 0 ? 'up' : 'down') + '">' + (x >= 0 ? '▲ ' : '▼ ') + Math.abs(x).toFixed(2) + '</span>';
+    }
+    $('dailyKpis').innerHTML = [
+      ['最新日前均价（发电侧）', last && last.da['发电侧'], last ? last.date.slice(5) + ' 运行日 · 较前一日 ' + delta(last.da['发电侧'], prev && prev.da['发电侧']) : '—'],
+      ['最新实时均价（发电侧）', lastRt && lastRt.rt['发电侧'], lastRt ? lastRt.rt_date.slice(5) + ' 运行日 · 同日日前 ' + fmt(lastRt.rt_da['发电侧']) : '—'],
+      ['本月日前均价（已入库日）', mtd, '已入库 ' + have.length + ' / ' + days.length + ' 天'],
+      ['现货 − 月度综合价', (mtd != null && mr) ? mtd - mr.composite_price : null, mr ? '月度综合价 ' + fmt(mr.composite_price) + '（中长期）' : '本月通报未入库']
+    ].map(function(k){
+      return '<div class="kpi"><div class="k">' + k[0] + '</div><div class="v">' + fmt(k[1]) + '<small>元/MWh</small></div><div class="d">' + k[2] + '</div></div>';
+    }).join('');
+
+    // A 日前均价
+    var o = base();
+    o.xAxis.data = label;
+    o.series = [
+      line('发电侧', rows.map(function(r){ return r && r.da['发电侧']; }), css('--s1'),
+        mr ? {markLine:{symbol:'none', silent:true, lineStyle:{type:'dashed', color:css('--text-3'), width:1.5},
+          label:{formatter:'月度综合价 ' + fmt(mr.composite_price), color:css('--text-2'), position:'insideStartTop'},
+          data:[{yAxis:mr.composite_price}]}} : {}),
+      line('燃煤', rows.map(function(r){ return r && r.da['燃煤']; }), css('--s2')),
+      line('燃气', rows.map(function(r){ return r && r.da['燃气']; }), css('--s3')),
+      line('新能源', rows.map(function(r){ return r && r.da['新能源']; }), css('--s4'))
+    ];
+    o.series.forEach(function(s){ s.showSymbol = have.length < 4; });
+    chart('cDa').setOption(o, true);
+
+    // B 日前 vs 实时：按实时运行日对齐
+    var rtBy = {}; DATA.daily.forEach(function(d){ if (d.rt_date) rtBy[d.rt_date] = d; });
+    var o2 = base(); o2.xAxis.data = label;
+    o2.series = [
+      line('日前', days.map(function(d){ return rtBy[d] ? rtBy[d].rt_da['发电侧'] : (byDate[d] ? byDate[d].da['发电侧'] : null); }), css('--s1')),
+      line('实时', days.map(function(d){ return rtBy[d] ? rtBy[d].rt['发电侧'] : null; }), css('--s2'))
+    ];
+    o2.series.forEach(function(s){ s.showSymbol = have.length < 4; });
+    chart('cRt').setOption(o2, true);
+
+    // C 申报结构
+    var o3 = base(); o3.xAxis.data = label; o3.yAxis.scale = false;
+    o3.tooltip.valueFormatter = function(v){ return v == null ? '—' : v.toFixed(2) + '%'; };
+    o3.series = [
+      line('零价及以下', rows.map(function(r){ return r && r.zero_pct; }), css('--s3')),
+      line('报价600以上', rows.map(function(r){ return r && r.above600_pct; }), css('--s2'))
+    ];
+    o3.series.forEach(function(s){ s.showSymbol = have.length < 4; });
+    chart('cDecl').setOption(o3, true);
+
+    // D 热力
+    var hm = [], vmin = 1e9, vmax = -1e9;
+    rows.forEach(function(r, i){
+      if (!r || !r.curve) return;
+      r.curve.gen.forEach(function(v, h){ if (v != null){ hm.push([h, i, v]); vmin = Math.min(vmin, v); vmax = Math.max(vmax, v); } });
+    });
+    var o4 = {
+      animation:false, textStyle:{fontFamily:'inherit'},
+      grid:{left:44, right:12, top:10, bottom:56},
+      tooltip:{backgroundColor:css('--surface'), borderColor:css('--border'), textStyle:{color:css('--text'), fontSize:12.5},
+        formatter:function(p){ return days[p.value[1]] + ' ' + p.value[0] + ':00<br>约 ' + p.value[2].toFixed(0) + ' 元/MWh'; }},
+      xAxis:{type:'category', data:Array.from({length:24}, function(_, h){ return h + ''; }), axisTick:{show:false},
+        axisLine:{show:false}, axisLabel:{color:css('--text-3'), fontSize:11, interval:2}, splitArea:{show:false}},
+      yAxis:{type:'category', data:label, inverse:true, axisTick:{show:false}, axisLine:{show:false},
+        axisLabel:{color:css('--text-3'), fontSize:11}},
+      visualMap:{min:hm.length ? Math.floor(vmin/50)*50 : 0, max:hm.length ? Math.ceil(vmax/50)*50 : 1, calculable:true,
+        orient:'horizontal', left:'center', bottom:0, itemHeight:140, itemWidth:10,
+        textStyle:{color:css('--text-3'), fontSize:11}, inRange:{color:[css('--seq-lo'), css('--seq-hi')]}},
+      series:[{type:'heatmap', data:hm, itemStyle:{borderColor:css('--surface'), borderWidth:1},
+        emphasis:{itemStyle:{borderColor:css('--text'), borderWidth:1.5}}}]
+    };
+    var ch = chart('cHeat'); ch.setOption(o4, true);
+    ch.off('click'); ch.on('click', function(p){ state.day = days[p.value[1]]; renderCurve(); });
+    if (!state.day || !byDate[state.day]) state.day = last ? last.date : null;
+    renderCurve();
+
+    // 数据表
+    var th = '<tr><th>运行日</th><th>日前发电侧</th><th>燃煤</th><th>燃气</th><th>新能源</th><th>日前最高</th><th>日前最低</th><th>实时日</th><th>实时发电侧</th><th>零价及以下%</th><th>600以上%</th><th>原文</th></tr>';
+    $('dailyTable').innerHTML = '<table>' + th + have.map(function(r){
+      return '<tr><td>' + r.date + (r.warn ? ' <span class="badge warn">需复核</span>' : '') + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + fmt(r.da['燃煤']) +
+        '</td><td>' + fmt(r.da['燃气']) + '</td><td>' + fmt(r.da['新能源']) + '</td><td>' + fmt(r.da_max) + '</td><td>' + fmt(r.da_min) +
+        '</td><td>' + (r.rt_date || '—') + '</td><td>' + fmt(r.rt['发电侧']) + '</td><td>' + fmt(r.zero_pct) + '</td><td>' + fmt(r.above600_pct) +
+        '</td><td><a href="' + r.url + '" target="_blank" rel="noopener">链接</a></td></tr>';
+    }).join('') + '</table>';
+  }
+
+  function renderCurve(){
+    var r = DATA.daily.filter(function(d){ return d.date === state.day; })[0];
+    $('curveTitle').textContent = r ? '单日 24 小时价格曲线 · ' + r.date : '单日 24 小时价格曲线';
+    var o = base();
+    o.xAxis.data = Array.from({length:24}, function(_, h){ return h + ':00'; });
+    o.series = (r && r.curve) ? [
+      line('发电机组(含核电)', r.curve.gen, css('--s1')),
+      line('燃煤', r.curve.coal, css('--s2')),
+      line('燃气', r.curve.gas, css('--s3'))
+    ] : [];
+    o.tooltip.valueFormatter = function(v){ return v == null ? '—' : '约 ' + v.toFixed(0); };
+    chart('cCurve').setOption(o, true);
+  }
+
+  // ───────── 月度中长期 ─────────
+  function renderMonthly(){
+    var M = DATA.monthly, x = M.map(function(m){ return m.ym.slice(2).replace('-', '.'); });
+    var L = M[M.length - 1], P = M[M.length - 2];
+    function d(a, b){ if (a == null || b == null) return ''; var v = a - b; return '较上月 <span class="' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '▲ ' : '▼ ') + Math.abs(v).toFixed(2) + '</span>'; }
+    $('monthlyKpis').innerHTML = [
+      ['月度综合价 · ' + L.ym, L.composite_price, d(L.composite_price, P && P.composite_price), '厘/kWh'],
+      ['月度双边协商均价', L.bilateral_price, '成交 ' + fmt(L.bilateral_vol) + ' 亿kWh', '厘/kWh'],
+      ['两场集中竞争综合价', L.central_total_price, '成交 ' + fmt(L.central_total_vol) + ' 亿kWh', '厘/kWh'],
+      ['年度合同均价', L.annual_price, '绿电环境价值 ' + fmt(L.green_env_avg) + ' 厘', '厘/kWh']
+    ].map(function(k){
+      return '<div class="kpi"><div class="k">' + k[0] + '</div><div class="v">' + fmt(k[1]) + '<small>' + k[3] + '</small></div><div class="d">' + k[2] + '</div></div>';
+    }).join('');
+
+    function col(k){ return M.map(function(m){ return m[k]; }); }
+    var o = base(); o.xAxis.data = x;
+    o.series = [line('月度综合价', col('composite_price'), css('--s1'), {showSymbol:true}),
+                line('月度双边协商', col('bilateral_price'), css('--s2')),
+                line('集中竞争综合价', col('central_total_price'), css('--s3')),
+                line('年度合同均价', col('annual_price'), css('--s4'))];
+    chart('mPrice').setOption(o, true);
+
+    var o2 = base(); o2.xAxis.data = x;
+    o2.series = [line('核电', col('nuclear_price'), css('--s1')), line('燃煤', col('coal_price'), css('--s2')),
+                 line('燃气', col('gas_price'), css('--s3')), line('新能源', col('renew_price'), css('--s4'))];
+    chart('mSrc').setOption(o2, true);
+
+    var o3 = base(); o3.xAxis.data = x; o3.yAxis.scale = false; o3.grid.right = 16;
+    o3.tooltip.axisPointer = {type:'shadow'}; o3.legend.icon = 'roundRect'; o3.legend.itemHeight = 10; o3.legend.itemWidth = 10;
+    function bar(name, k, c, last){ return {name:name, type:'bar', stack:'v', data:col(k), barMaxWidth:26,
+      itemStyle:{color:c, borderColor:css('--surface'), borderWidth:1, borderRadius:last ? [4,4,0,0] : 0}}; }
+    o3.series = [bar('月度双边协商', 'bilateral_vol', css('--s1')), bar('集中竞争', 'central_total_vol', css('--s2')),
+                 bar('代购电挂牌', 'agency_list_vol', css('--s3'), true)];
+    chart('mVol').setOption(o3, true);
+
+    // 中长期 vs 现货（月均）
+    var spot = {}, rt = {};
+    DATA.daily.forEach(function(r){
+      var k = r.date.slice(0,7); (spot[k] = spot[k] || []).push(r.da['发电侧']);
+      if (r.rt_date){ var k2 = r.rt_date.slice(0,7); (rt[k2] = rt[k2] || []).push(r.rt['发电侧']); }
+    });
+    var o4 = base(); o4.xAxis.data = x;
+    o4.series = [line('月度综合价', col('composite_price'), css('--s1'), {showSymbol:true}),
+      line('现货日前月均', M.map(function(m){ return spot[m.ym] ? avg(spot[m.ym]) : null; }), css('--s2'), {showSymbol:true}),
+      line('现货实时月均', M.map(function(m){ return rt[m.ym] ? avg(rt[m.ym]) : null; }), css('--s3'), {showSymbol:true})];
+    chart('mVsSpot').setOption(o4, true);
+
+    var o5 = base(); o5.xAxis.data = x; o5.legend.show = false;
+    o5.series = [line('绿电环境价值月度均价', col('green_env_avg'), css('--s3'), {showSymbol:true,
+      endLabel:{show:true, color:css('--text-2'), fontSize:11.5, formatter:function(p){ return Number(p.value).toFixed(2); }}})];
+    chart('mGreen').setOption(o5, true);
+
+    var keys = Object.keys(DATA.field_meta);
+    $('monthlyTable').innerHTML = '<table><tr><th>指标</th><th>单位</th>' + M.map(function(m){ return '<th>' + m.ym + '</th>'; }).join('') + '</tr>' +
+      keys.map(function(k){ return '<tr><td>' + DATA.field_meta[k].name + '</td><td>' + DATA.field_meta[k].unit + '</td>' +
+        M.map(function(m){ return '<td>' + fmt(m[k]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
+  }
+
+  // ───────── 档案 ─────────
+  function renderArchive(){
+    var months = monthsOfDaily(); var cm = state.calMonth || months[months.length - 1];
+    var box = $('calChips'); box.innerHTML = '';
+    months.forEach(function(ym){
+      var b = document.createElement('button'); b.className = 'chip'; b.textContent = ym;
+      b.setAttribute('aria-pressed', ym === cm); b.onclick = function(){ state.calMonth = ym; renderArchive(); }; box.appendChild(b);
+    });
+    var byDate = {}; DATA.daily.forEach(function(d){ byDate[d.date] = d; });
+    var days = daysIn(cm), first = (new Date(cm + '-01T00:00:00').getDay() + 6) % 7;
+    var h = '<div class="cal">' + ['一','二','三','四','五','六','日'].map(function(w){ return '<div class="hd">' + w + '</div>'; }).join('');
+    for (var i = 0; i < first; i++) h += '<div class="hd"></div>';
+    days.forEach(function(d){
+      var r = byDate[d];
+      h += r ? '<div class="has' + (r.warn ? ' warn' : '') + '" title="' + d + ' 日前 ' + fmt(r.da['发电侧']) + '">' + (+d.slice(8)) + '</div>'
+             : '<div title="' + d + ' 缺失">' + (+d.slice(8)) + '</div>';
+    });
+    $('cal').innerHTML = h + '</div>';
+    $('monthlyLinks').innerHTML = '<table><tr><th>月份</th><th>综合价</th><th>发布</th><th>原文</th></tr>' +
+      DATA.monthly.slice().reverse().map(function(m){
+        return '<tr><td>' + m.ym + (m.missing && m.missing.length ? ' <span class="badge warn">字段缺失</span>' : '') + '</td><td>' + fmt(m.composite_price) +
+          '</td><td>' + m.published.slice(0,10) + '</td><td><a href="' + m.url + '" target="_blank" rel="noopener">链接</a></td></tr>';
+      }).join('') + '</table>';
+    $('dailyLinks').innerHTML = '<table><tr><th>运行日</th><th>日前发电侧</th><th>实时日</th><th>实时发电侧</th><th>状态</th><th>原文</th></tr>' +
+      DATA.daily.slice().reverse().map(function(r){
+        return '<tr><td>' + r.date + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + (r.rt_date || '—') + '</td><td>' + fmt(r.rt['发电侧']) +
+          '</td><td>' + (r.warn ? '<span class="badge warn">需复核</span>' : '<span class="badge">已校验</span>') +
+          '</td><td><a href="' + r.url + '" target="_blank" rel="noopener">链接</a></td></tr>';
+      }).join('') + '</table>';
+  }
+
+  function render(){
+    if (!DATA) return;
+    if (state.tab === 'daily') renderDaily();
+    else if (state.tab === 'monthly') renderMonthly();
+    else renderArchive();
+    Object.keys(charts).forEach(function(k){ charts[k].resize(); });
+  }
+
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.onclick = function(){
+      state.tab = t.dataset.tab;
+      document.querySelectorAll('.tab').forEach(function(x){ x.setAttribute('aria-selected', x === t); });
+      ['daily','monthly','archive'].forEach(function(n){ $('tab-' + n).classList.toggle('hidden', n !== state.tab); });
+      try { localStorage.setItem('gdtb-tab', state.tab); } catch (e) {}
+      render();
+    };
+  });
+  window.addEventListener('resize', function(){ Object.keys(charts).forEach(function(k){ charts[k].resize(); }); });
+  // 系统深浅色切换时用新的色值重画
+  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+
+  fetch('data.json?_=' + Date.now()).then(function(r){ return r.json(); }).then(function(d){
+    DATA = d;
+    $('updated').textContent = '数据更新于 ' + d.generated_at + ' · 月报 ' + d.monthly.length + ' 期 · 日报 ' + d.daily.length + ' 篇';
+    var ms = monthsOfDaily(); state.month = ms[ms.length - 1];
+    var saved = null; try { saved = localStorage.getItem('gdtb-tab'); } catch (e) {}
+    var btn = saved && document.querySelector('.tab[data-tab="' + saved + '"]');
+    if (btn) btn.click(); else render();
+  }).catch(function(e){ $('updated').textContent = '数据加载失败：' + e; });
+})();
+</script>
+</body>
+</html>
