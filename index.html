@@ -205,6 +205,11 @@ details{margin-top:4px} summary{cursor:pointer;color:var(--text-2);font-size:12.
   function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
   function fmt(v, d){ return v == null ? '—' : Number(v).toFixed(d == null ? 2 : d); }
   function avg(a){ a = a.filter(function(x){ return x != null; }); return a.length ? a.reduce(function(s,x){return s+x;},0)/a.length : null; }
+  function sourceCell(r){
+    var publicUrl = /^https?:\/\/(?!127\.0\.0\.1|localhost)/.test(r.url || '');
+    if (publicUrl) return '<a href="' + r.url + '" target="_blank" rel="noopener">链接</a>';
+    return r.source_kind && r.source_kind !== 'wechat_article' ? '<span class="badge">历史补录</span>' : '—';
+  }
 
   function base(){
     return {
@@ -239,8 +244,20 @@ details{margin-top:4px} summary{cursor:pointer;color:var(--text-2);font-size:12.
 
   // ───────── 现货日报 ─────────
   function monthsOfDaily(){
-    var s = {}; DATA.daily.forEach(function(d){ s[d.date.slice(0,7)] = 1; });
-    return Object.keys(s).sort();
+    // 优先使用构建阶段生成的连续月份索引。旧版 data.json 没有 coverage 时，
+    // 仍由最早/最晚日报补出中间空月，避免“整月缺失反而不可选择”。
+    if (DATA.coverage && DATA.coverage.daily && DATA.coverage.daily.months){
+      return DATA.coverage.daily.months.map(function(m){ return m.month; });
+    }
+    if (!DATA.daily.length) return [];
+    var dates = DATA.daily.map(function(d){ return d.date.slice(0,7); }).sort();
+    var y = +dates[0].slice(0,4), m = +dates[0].slice(5,7);
+    var ey = +dates[dates.length - 1].slice(0,4), em = +dates[dates.length - 1].slice(5,7), out = [];
+    while (y < ey || (y === ey && m <= em)){
+      out.push(y + '-' + (m < 10 ? '0' : '') + m);
+      if (m === 12){ y += 1; m = 1; } else m += 1;
+    }
+    return out;
   }
   function daysIn(ym){
     var y = +ym.slice(0,4), m = +ym.slice(5,7), n = new Date(y, m, 0).getDate(), out = [];
@@ -354,7 +371,7 @@ details{margin-top:4px} summary{cursor:pointer;color:var(--text-2);font-size:12.
       return '<tr><td>' + r.date + (r.warn ? ' <span class="badge warn">需复核</span>' : '') + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + fmt(r.da['燃煤']) +
         '</td><td>' + fmt(r.da['燃气']) + '</td><td>' + fmt(r.da['新能源']) + '</td><td>' + fmt(r.da_max) + '</td><td>' + fmt(r.da_min) +
         '</td><td>' + (r.rt_date || '—') + '</td><td>' + fmt(r.rt['发电侧']) + '</td><td>' + fmt(r.zero_pct) + '</td><td>' + fmt(r.above600_pct) +
-        '</td><td><a href="' + r.url + '" target="_blank" rel="noopener">链接</a></td></tr>';
+        '</td><td>' + sourceCell(r) + '</td></tr>';
     }).join('') + '</table>';
   }
 
@@ -456,8 +473,8 @@ details{margin-top:4px} summary{cursor:pointer;color:var(--text-2);font-size:12.
     $('dailyLinks').innerHTML = '<table><tr><th>运行日</th><th>日前发电侧</th><th>实时日</th><th>实时发电侧</th><th>状态</th><th>原文</th></tr>' +
       DATA.daily.slice().reverse().map(function(r){
         return '<tr><td>' + r.date + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + (r.rt_date || '—') + '</td><td>' + fmt(r.rt['发电侧']) +
-          '</td><td>' + (r.warn ? '<span class="badge warn">需复核</span>' : '<span class="badge">已校验</span>') +
-          '</td><td><a href="' + r.url + '" target="_blank" rel="noopener">链接</a></td></tr>';
+          '</td><td>' + (r.warn ? '<span class="badge warn">需复核</span>' : '<span class="badge">自动校验通过</span>') +
+          '</td><td>' + sourceCell(r) + '</td></tr>';
       }).join('') + '</table>';
   }
 
@@ -484,7 +501,8 @@ details{margin-top:4px} summary{cursor:pointer;color:var(--text-2);font-size:12.
 
   fetch('data.json?_=' + Date.now()).then(function(r){ return r.json(); }).then(function(d){
     DATA = d;
-    $('updated').textContent = '数据更新于 ' + d.generated_at + ' · 月报 ' + d.monthly.length + ' 期 · 日报 ' + d.daily.length + ' 篇';
+    $('updated').textContent = '数据更新于 ' + d.generated_at + ' · 月报 ' + d.monthly.length + ' 期 · 日报 ' + d.daily.length + ' 篇' +
+      (d.schema_version ? ' · 数据契约 v' + d.schema_version : '');
     var ms = monthsOfDaily(); state.month = ms[ms.length - 1];
     var saved = null; try { saved = localStorage.getItem('gdtb-tab'); } catch (e) {}
     var btn = saved && document.querySelector('.tab[data-tab="' + saved + '"]');
