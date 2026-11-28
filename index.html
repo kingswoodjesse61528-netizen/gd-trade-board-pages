@@ -109,6 +109,9 @@ details{margin-top:4px} summary{cursor:pointer;color:var(--text-2);font-size:12.
 dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-width:100%;max-height:100%;margin:0;padding:24px;border:0;border-left:1px solid var(--border);background:#fff;color:var(--text);box-shadow:-12px 0 45px #003b7326}dialog::backdrop{background:#17203355}
 .drawer-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.drawer-heading h2{margin:0;font-size:19px}.drawer-list p{margin:0;padding:10px 0;border-bottom:1px solid var(--grid);overflow-wrap:anywhere}
 .source-button{padding:0;border:0;background:none;color:var(--s1);text-decoration:underline}.status-good{color:var(--good)}.status-warn{color:var(--warn)}
+.archive-toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:0 0 12px}.archive-toolbar label{display:grid;gap:4px;color:var(--text-2);font-size:11px}.archive-toolbar select{min-width:170px;padding:7px 28px 7px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text)}
+tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select-date].selected-date td{background:var(--brand-soft)}
+.linked-date{color:var(--brand);font-weight:600}
 @media (max-width:760px){
   .app-shell{grid-template-columns:64px minmax(0,1fr)}.sidebar{padding:15px 7px}.nav-copy{display:none}.brand{padding:0 5px 17px}.sidebar .tab{justify-content:center;padding:10px 4px}.collapse-button{display:none}
   .global-toolbar{align-items:flex-start;flex-direction:column;padding:15px 16px}.toolbar-controls{width:100%}.context-bar{padding:9px 16px;flex-direction:column}.wrap{padding:14px}.overview-grid{grid-template-columns:1fr}.section-heading{flex-direction:column}.card{padding:12px}
@@ -126,20 +129,21 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
     <div class="brand"><span class="brand-mark" aria-hidden="true">海</span><div class="nav-copy"><strong>CNOOC 电力研究</strong><small>广东市场一体化工作台</small></div></div>
     <nav class="tabs" aria-label="工作区">
       <span class="nav-group nav-copy">市场研究</span>
-      <button class="tab" type="button" data-tab="overview" aria-current="page"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-copy">市场驾驶舱</span></button>
-      <button class="tab" type="button" data-tab="daily"><span class="nav-icon" aria-hidden="true">⌁</span><span class="nav-copy">现货日报</span></button>
-      <button class="tab" type="button" data-tab="monthly"><span class="nav-icon" aria-hidden="true">▥</span><span class="nav-copy">月度中长期</span></button>
+      <button class="tab" type="button" data-tab="overview" aria-label="市场驾驶舱" aria-current="page"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-copy">市场驾驶舱</span></button>
+      <button class="tab" type="button" data-tab="daily" aria-label="现货日报"><span class="nav-icon" aria-hidden="true">⌁</span><span class="nav-copy">现货日报</span></button>
+      <button class="tab" type="button" data-tab="monthly" aria-label="月度中长期"><span class="nav-icon" aria-hidden="true">▥</span><span class="nav-copy">月度中长期</span></button>
       <span class="nav-group nav-copy">数据管理</span>
-      <button class="tab" type="button" data-tab="archive"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-copy">数据档案</span></button>
+      <button class="tab" type="button" data-tab="archive" aria-label="数据档案"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-copy">数据档案</span></button>
     </nav>
     <div class="sidebar-bottom nav-copy">广东电力交易中心公开信息<br>快报数据，非正式结算数据</div>
     <button class="collapse-button" id="collapseNav" type="button" aria-expanded="true" aria-label="折叠导航">☰ <span class="nav-copy">折叠导航</span></button>
   </aside>
   <div class="workspace">
     <header class="global-toolbar">
-      <div><div class="eyebrow">CNOOC 广东电力交易研究工作台 <span class="eyebrow-tag">P2</span></div><h1 id="pageTitle">市场驾驶舱</h1></div>
+      <div><div class="eyebrow">CNOOC 广东电力交易研究工作台 <span class="eyebrow-tag">P3</span></div><h1 id="pageTitle">市场驾驶舱</h1></div>
       <div class="toolbar-controls">
         <label for="globalMonth">分析月份<select id="globalMonth" disabled><option>加载中</option></select></label>
+        <label for="globalDay">联动报告日<select id="globalDay" disabled><option>加载中</option></select></label>
         <button class="quality-button" id="qualityButton" type="button" disabled>正在加载数据</button>
       </div>
     </header>
@@ -235,6 +239,7 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
   <!-- ───────── 数据档案 ───────── -->
   <section id="tab-archive" class="hidden" aria-label="数据档案">
     <div id="archiveStatus" class="scope-note"></div>
+    <div class="archive-toolbar"><label for="archiveFilter">日报质量筛选<select id="archiveFilter"><option value="all">全部记录</option><option value="warn">需复核</option><option value="backfill">历史补录</option><option value="pass">自动校验通过</option></select></label><span id="archiveCount" class="sub"></span></div>
     <div class="grid2">
       <div class="card">
         <h3>日报覆盖日历</h3>
@@ -267,7 +272,7 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
 <script>
 (function(){
   'use strict';
-  var DATA = null, charts = {}, state = {tab:'overview', month:null, day:null};
+  var DATA = null, charts = {}, state = {tab:'overview', month:null, day:null, archiveFilter:'all'};
   var titles = {overview:'市场驾驶舱', daily:'现货日报 · 日前与实时', monthly:'月度中长期', archive:'数据档案 · 数据日历'};
   var $ = function(id){ return document.getElementById(id); };
   function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
@@ -354,6 +359,22 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
     return out;
   }
   function monthlyRec(ym){ return DATA.monthly.filter(function(m){ return m.ym === ym; })[0]; }
+  function recordsInMonth(ym){ return DATA.daily.filter(function(r){ return r.date.slice(0,7) === ym; }); }
+  function syncDaySelector(){
+    var rows = recordsInMonth(state.month), select = $('globalDay');
+    if (!rows.length){ select.innerHTML = '<option value="">当前月无日报</option>'; select.disabled = true; state.day = null; return; }
+    if (!state.day || state.day.slice(0,7) !== state.month || !rows.some(function(r){ return r.date === state.day; })) state.day = rows[rows.length - 1].date;
+    select.innerHTML = rows.map(function(r){ return '<option value="' + r.date + '">' + r.date.slice(5).replace('-', '月') + '日</option>'; }).join('');
+    select.value = state.day; select.disabled = false;
+  }
+  function dateFromAxisName(name){
+    var day = parseInt(name, 10); if (!day) return null;
+    return state.month + '-' + (day < 10 ? '0' : '') + day;
+  }
+  function bindDateChart(id){
+    var ch = charts[id]; if (!ch) return;
+    ch.off('click'); ch.on('click', function(p){ var d = dateFromAxisName(p.name); if (d) selectDay(d); });
+  }
 
   function renderMonthChips(){
     var box = $('monthChips'); box.querySelectorAll('.chip').forEach(function(c){ c.remove(); });
@@ -407,6 +428,7 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
     ];
     o.series.forEach(function(s){ s.showSymbol = have.length < 4; });
     chart('cDa').setOption(o, true);
+    bindDateChart('cDa');
 
     // B 日前 vs 实时：按实时运行日对齐
     var rtBy = {}; DATA.daily.forEach(function(d){ if (d.rt_date) rtBy[d.rt_date] = d; });
@@ -417,6 +439,7 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
     ];
     o2.series.forEach(function(s){ s.showSymbol = have.length < 4; });
     chart('cRt').setOption(o2, true);
+    bindDateChart('cRt');
 
     // C 申报结构
     var o3 = base(); o3.xAxis.data = label; o3.yAxis.scale = false;
@@ -450,14 +473,14 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
         emphasis:{itemStyle:{borderColor:css('--text'), borderWidth:1.5}}}]
     };
     var ch = chart('cHeat'); ch.setOption(o4, true);
-    ch.off('click'); ch.on('click', function(p){ state.day = days[p.value[1]]; renderCurve(); });
+    ch.off('click'); ch.on('click', function(p){ selectDay(days[p.value[1]]); });
     if (!state.day || !byDate[state.day]) state.day = last ? last.date : null;
     renderCurve();
 
     // 数据表
     var th = '<tr><th>运行日</th><th>日前发电侧</th><th>燃煤</th><th>燃气</th><th>新能源</th><th>日前最高</th><th>日前最低</th><th>实时日</th><th>实时发电侧</th><th>零价及以下%</th><th>600以上%</th><th>原文</th></tr>';
     $('dailyTable').innerHTML = '<table>' + th + have.map(function(r){
-      return '<tr><td>' + r.date + (r.warn ? ' <span class="badge warn">需复核</span>' : '') + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + fmt(r.da['燃煤']) +
+      return '<tr data-select-date="' + r.date + '" class="' + (r.date === state.day ? 'selected-date' : '') + '"><td>' + r.date + (r.warn ? ' <span class="badge warn">需复核</span>' : '') + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + fmt(r.da['燃煤']) +
         '</td><td>' + fmt(r.da['燃气']) + '</td><td>' + fmt(r.da['新能源']) + '</td><td>' + fmt(r.da_max) + '</td><td>' + fmt(r.da_min) +
         '</td><td>' + (r.rt_date || '—') + '</td><td>' + fmt(r.rt['发电侧']) + '</td><td>' + fmt(r.zero_pct) + '</td><td>' + fmt(r.above600_pct) +
         '</td><td>' + sourceCell(r) + '</td></tr>';
@@ -486,11 +509,12 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
       var target = chart(pair[0]);
       target.setOption(charts[pair[1]].getOption(), true);
     });
+    bindDateChart('overviewPrice');
     $('overviewCurveLabel').textContent = (state.day || '暂无日期') + ' · 图像估读值，仅供形态参考';
     var rows = DATA.daily.filter(function(r){ return r.date.slice(0,7) === state.month; }).slice(-5).reverse();
     $('overviewLatest').innerHTML = rows.length ? '<table><thead><tr><th>报告日</th><th>日前</th><th>实时日</th><th>实时</th><th>质量状态</th></tr></thead><tbody>' + rows.map(function(r){
       var s = recordStatus(r);
-      return '<tr><td>' + esc(r.date) + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + esc(r.rt_date) + '</td><td>' + fmt(r.rt['发电侧']) + '</td><td><button class="source-button ' + s.cls + '" data-source-date="' + r.date + '">' + s.label + '</button></td></tr>';
+      return '<tr data-select-date="' + r.date + '" class="' + (r.date === state.day ? 'selected-date' : '') + '"><td>' + esc(r.date) + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + esc(r.rt_date) + '</td><td>' + fmt(r.rt['发电侧']) + '</td><td><button class="source-button ' + s.cls + '" data-source-date="' + r.date + '">' + s.label + '</button></td></tr>';
     }).join('') + '</tbody></table>' : '<div class="scope-note">当前月份暂无日报记录</div>';
   }
 
@@ -577,10 +601,17 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
         return '<tr><td>' + m.ym + (m.missing && m.missing.length ? ' <span class="badge warn">字段缺失</span>' : '') + '</td><td>' + fmt(m.composite_price) +
           '</td><td>' + m.published.slice(0,10) + '</td><td><a href="' + m.url + '" target="_blank" rel="noopener">链接</a></td></tr>';
       }).join('') + '</table>';
+    var filtered = recordsInMonth(cm).filter(function(r){
+      if (state.archiveFilter === 'warn') return !!r.warn;
+      if (state.archiveFilter === 'backfill') return r.source_kind && r.source_kind !== 'wechat_article';
+      if (state.archiveFilter === 'pass') return !r.warn;
+      return true;
+    });
+    $('archiveCount').textContent = '显示 ' + filtered.length + ' / ' + recordsInMonth(cm).length + ' 条';
     $('dailyLinks').innerHTML = '<table><tr><th>运行日</th><th>日前发电侧</th><th>实时日</th><th>实时发电侧</th><th>状态</th><th>原文</th></tr>' +
-      DATA.daily.slice().reverse().map(function(r){
+      filtered.slice().reverse().map(function(r){
         var s = recordStatus(r);
-        return '<tr><td>' + r.date + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + (r.rt_date || '—') + '</td><td>' + fmt(r.rt['发电侧']) +
+        return '<tr data-select-date="' + r.date + '" class="' + (r.date === state.day ? 'selected-date' : '') + '"><td>' + r.date + '</td><td>' + fmt(r.da['发电侧']) + '</td><td>' + (r.rt_date || '—') + '</td><td>' + fmt(r.rt['发电侧']) +
           '</td><td><span class="badge' + (r.warn ? ' warn' : '') + '">' + s.label + '</span>' +
           '</td><td>' + sourceCell(r) + '</td></tr>';
       }).join('') + '</table>';
@@ -597,9 +628,10 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
   }
 
   function updateContext(){
+    syncDaySelector();
     $('pageTitle').textContent = titles[state.tab];
     $('globalMonth').value = state.month;
-    $('dateScope').textContent = state.month + ' · 实时按运行日对齐 · 月均统计非空已入库日';
+    $('dateScope').innerHTML = state.month + ' · 联动报告日 <span class="linked-date">' + esc(state.day || '无') + '</span> · 实时按运行日对齐';
     var c = monthCoverage(state.month) || {};
     $('archiveStatus').textContent = state.month + '：' + (c.available_days || 0) + '/' + (c.calendar_days || daysIn(state.month).length) + ' 个日期有记录，' + (c.warning_days || 0) + ' 天有自动警告，' + (c.provenance_days || 0) + ' 天为历史补录来源。';
     $('qualityButton').textContent = (c.warning_days || 0) + '天需复核 · 查看质量';
@@ -607,6 +639,10 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
   function setMonth(ym){
     if (monthsOfDaily().indexOf(ym) < 0) return;
     state.month = ym; state.day = null; render();
+  }
+  function selectDay(day){
+    if (!DATA.daily.some(function(r){ return r.date === day; })) return;
+    state.month = day.slice(0,7); state.day = day; render();
   }
   function navigate(tab){
     if (['overview','daily','monthly','archive'].indexOf(tab) < 0) return;
@@ -641,12 +677,15 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
 
   document.querySelectorAll('.tab').forEach(function(t){ t.onclick = function(){ navigate(t.dataset.tab); }; });
   $('globalMonth').addEventListener('change', function(){ setMonth(this.value); });
+  $('globalDay').addEventListener('change', function(){ selectDay(this.value); });
+  $('archiveFilter').addEventListener('change', function(){ state.archiveFilter = this.value; render(); });
   $('qualityButton').onclick = function(){ showDetail(); };
   $('closeDrawer').onclick = function(){ if ($('detailDrawer').close) $('detailDrawer').close(); else $('detailDrawer').removeAttribute('open'); };
   document.addEventListener('click', function(e){
-    var go = e.target.closest('[data-go]'), source = e.target.closest('[data-source-date]');
+    var go = e.target.closest('[data-go]'), source = e.target.closest('[data-source-date]'), row = e.target.closest('[data-select-date]');
     if (go) navigate(go.dataset.go);
-    if (source) showDetail(source.dataset.sourceDate);
+    if (source){ showDetail(source.dataset.sourceDate); return; }
+    if (row) selectDay(row.dataset.selectDate);
   });
   $('collapseNav').onclick = function(){
     var collapsed = $('appShell').classList.toggle('collapsed');
