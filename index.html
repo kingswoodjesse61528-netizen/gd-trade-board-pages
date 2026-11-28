@@ -112,9 +112,10 @@ dialog{position:fixed;inset:0 0 0 auto;width:min(540px,100%);height:100%;max-wid
 .archive-toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:0 0 12px}.archive-toolbar label{display:grid;gap:4px;color:var(--text-2);font-size:11px}.archive-toolbar select{min-width:170px;padding:7px 28px 7px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text)}
 tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select-date].selected-date td{background:var(--brand-soft)}
 .linked-date{color:var(--brand);font-weight:600}
+.research-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:14px}.signal-list{display:grid;gap:9px}.signal-card{padding:13px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}.signal-card strong{display:block;margin-bottom:4px}.signal-card p{margin:0;color:var(--text-2);font-size:12px}.module-list{display:grid;gap:8px}.module-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--grid)}.module-row span{color:var(--text-2);font-size:12px}.module-state{padding:2px 7px;border:1px solid var(--border);border-radius:999px;color:var(--text-3);font-size:11px;white-space:nowrap}.gate-note{border-left:3px solid var(--warn);padding-left:10px}.gate-note.good{border-left-color:var(--good)}
 @media (max-width:760px){
   .app-shell{grid-template-columns:64px minmax(0,1fr)}.sidebar{padding:15px 7px}.nav-copy{display:none}.brand{padding:0 5px 17px}.sidebar .tab{justify-content:center;padding:10px 4px}.collapse-button{display:none}
-  .global-toolbar{align-items:flex-start;flex-direction:column;padding:15px 16px}.toolbar-controls{width:100%}.context-bar{padding:9px 16px;flex-direction:column}.wrap{padding:14px}.overview-grid{grid-template-columns:1fr}.section-heading{flex-direction:column}.card{padding:12px}
+  .global-toolbar{align-items:flex-start;flex-direction:column;padding:15px 16px}.toolbar-controls{width:100%}.context-bar{padding:9px 16px;flex-direction:column}.wrap{padding:14px}.overview-grid,.research-grid{grid-template-columns:1fr}.section-heading{flex-direction:column}.card{padding:12px}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid2{grid-template-columns:1fr}
   .kpi .v{font-size:22px}
@@ -132,6 +133,7 @@ tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select
       <button class="tab" type="button" data-tab="overview" aria-label="市场驾驶舱" aria-current="page"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-copy">市场驾驶舱</span></button>
       <button class="tab" type="button" data-tab="daily" aria-label="现货日报"><span class="nav-icon" aria-hidden="true">⌁</span><span class="nav-copy">现货日报</span></button>
       <button class="tab" type="button" data-tab="monthly" aria-label="月度中长期"><span class="nav-icon" aria-hidden="true">▥</span><span class="nav-copy">月度中长期</span></button>
+      <button class="tab" type="button" data-tab="research" aria-label="研判与策略"><span class="nav-icon" aria-hidden="true">◇</span><span class="nav-copy">研判与策略</span></button>
       <span class="nav-group nav-copy">数据管理</span>
       <button class="tab" type="button" data-tab="archive" aria-label="数据档案"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-copy">数据档案</span></button>
     </nav>
@@ -140,7 +142,7 @@ tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select
   </aside>
   <div class="workspace">
     <header class="global-toolbar">
-      <div><div class="eyebrow">CNOOC 广东电力交易研究工作台 <span class="eyebrow-tag">P3</span></div><h1 id="pageTitle">市场驾驶舱</h1></div>
+      <div><div class="eyebrow">CNOOC 广东电力交易研究工作台 <span class="eyebrow-tag">P4</span></div><h1 id="pageTitle">市场驾驶舱</h1></div>
       <div class="toolbar-controls">
         <label for="globalMonth">分析月份<select id="globalMonth" disabled><option>加载中</option></select></label>
         <label for="globalDay">联动报告日<select id="globalDay" disabled><option>加载中</option></select></label>
@@ -236,6 +238,22 @@ tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select
     <details class="card"><summary>查看月度通报数据表</summary><div class="tbl-wrap" id="monthlyTable"></div></details>
   </section>
 
+  <!-- ───────── 研判与策略 ───────── -->
+  <section id="tab-research" class="hidden" aria-label="研判与策略">
+    <div class="section-heading"><div><h2>研判与策略</h2><p>基于已入库历史快报的描述性研究，不构成价格预测或交易建议</p></div></div>
+    <div class="scope-note">本页不生成未来价格。所有指标均由当前分析月份的历史记录计算；覆盖不足或存在自动警告时，仅展示观察结果，不输出策略结论。</div>
+    <div class="kpis" id="researchKpis"></div>
+    <div class="research-grid">
+      <div class="card"><h3>现货与合同参考价</h3><p class="note">日前、实时均按各自运行日统计 · 月度综合价仅作历史参照</p><div class="chart tall" id="rHistory"></div></div>
+      <div class="card"><h3>研究观察</h3><p class="note">描述事实与数据限制，不输出买卖建议</p><div id="researchSignals" class="signal-list"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>日前相对合同参考价偏差</h3><p class="note">每日日前发电侧均价－当月综合价 · 元/MWh</p><div class="chart" id="rSpread"></div></div>
+      <div class="card"><h3>预测与策略接口状态</h3><p class="note">后续模块必须有独立数据源、版本和回测记录后才能启用</p><div id="researchModules" class="module-list"></div></div>
+    </div>
+    <details class="card"><summary>查看研究指标口径</summary><div id="researchMethod" class="scope-note"></div></details>
+  </section>
+
   <!-- ───────── 数据档案 ───────── -->
   <section id="tab-archive" class="hidden" aria-label="数据档案">
     <div id="archiveStatus" class="scope-note"></div>
@@ -273,11 +291,12 @@ tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select
 (function(){
   'use strict';
   var DATA = null, charts = {}, state = {tab:'overview', month:null, day:null, archiveFilter:'all'};
-  var titles = {overview:'市场驾驶舱', daily:'现货日报 · 日前与实时', monthly:'月度中长期', archive:'数据档案 · 数据日历'};
+  var titles = {overview:'市场驾驶舱', daily:'现货日报 · 日前与实时', monthly:'月度中长期', research:'研判与策略 · 历史观察', archive:'数据档案 · 数据日历'};
   var $ = function(id){ return document.getElementById(id); };
   function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
   function fmt(v, d){ return v == null ? '—' : Number(v).toFixed(d == null ? 2 : d); }
   function avg(a){ a = a.filter(function(x){ return x != null; }); return a.length ? a.reduce(function(s,x){return s+x;},0)/a.length : null; }
+  function std(a){ a = a.filter(function(x){ return x != null; }); if (!a.length) return null; var m = avg(a); return Math.sqrt(a.reduce(function(s,x){ return s + Math.pow(x-m,2); },0)/a.length); }
   function esc(s){ return String(s == null ? '—' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function sourceCell(r){
     var publicUrl = /^https?:\/\/(?!127\.0\.0\.1|localhost)/.test(r.url || '');
@@ -578,6 +597,61 @@ tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select
         M.map(function(m){ return '<td>' + fmt(m[k]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
   }
 
+  // ───────── 研判与策略（历史描述，不输出预测） ─────────
+  function renderResearch(){
+    var ym = state.month, days = daysIn(ym), byDate = {}, rtBy = {};
+    DATA.daily.forEach(function(r){ byDate[r.date] = r; if (r.rt_date) rtBy[r.rt_date] = r; });
+    var rows = days.map(function(d){ return byDate[d] || null; }), have = rows.filter(Boolean);
+    var daValues = have.map(function(r){ return r.da['发电侧']; }).filter(function(v){ return v != null; });
+    var rtValues = days.map(function(d){ return rtBy[d] && rtBy[d].rt['发电侧']; }).filter(function(v){ return v != null; });
+    var daMean = avg(daValues), rtMean = avg(rtValues), volatility = std(daValues), mr = monthlyRec(ym);
+    var contract = mr && mr.composite_price, contractSpread = daMean != null && contract != null ? daMean - contract : null;
+    var daRtSpread = daMean != null && rtMean != null ? daMean - rtMean : null;
+    var coverage = monthCoverage(ym) || {}, coverageRatio = coverage.calendar_days ? (coverage.available_days || 0) / coverage.calendar_days : 0;
+    var range = daValues.length ? Math.max.apply(null, daValues) - Math.min.apply(null, daValues) : null;
+    var gateGood = coverageRatio >= 0.8 && !(coverage.warning_days || 0);
+
+    $('researchKpis').innerHTML = [
+      ['日前月均（历史）', daMean, '非空已入库日 ' + daValues.length + ' 天', '元/MWh'],
+      ['实时月均（历史）', rtMean, '按实时运行日统计 ' + rtValues.length + ' 天', '元/MWh'],
+      ['日前－合同参考', contractSpread, contract != null ? '月度综合价 ' + fmt(contract) : '本月月报未入库', '元/MWh'],
+      ['日前日度波动度', volatility, '总体标准差 σ；极差 ' + fmt(range), '元/MWh']
+    ].map(function(k){ return '<div class="kpi"><div class="k">' + k[0] + '</div><div class="v">' + fmt(k[1]) + '<small>' + k[3] + '</small></div><div class="d">' + k[2] + '</div></div>'; }).join('');
+
+    var labels = days.map(function(d){ return +d.slice(8) + '日'; });
+    var o = base(); o.xAxis.data = labels;
+    o.series = [
+      line('日前发电侧', rows.map(function(r){ return r && r.da['发电侧']; }), css('--s1')),
+      line('实时发电侧', days.map(function(d){ return rtBy[d] ? rtBy[d].rt['发电侧'] : null; }), css('--s2')),
+      line('月度综合价', days.map(function(){ return contract == null ? null : contract; }), css('--s4'), {lineStyle:{width:1.5,type:'dashed',color:css('--s4')}})
+    ];
+    chart('rHistory').setOption(o, true); bindDateChart('rHistory');
+
+    var spread = rows.map(function(r){ var v = r && r.da['发电侧']; return v == null || contract == null ? null : v - contract; });
+    var o2 = base(); o2.xAxis.data = labels; o2.grid.right = 24; o2.legend.show = false;
+    o2.series = [{name:'日前－合同参考',type:'bar',data:spread,barMaxWidth:18,
+      itemStyle:{color:function(p){ return p.value >= 0 ? css('--bad') : css('--good'); }},
+      markLine:{symbol:'none',silent:true,lineStyle:{color:css('--text-3'),width:1},label:{show:false},data:[{yAxis:0}]}}];
+    chart('rSpread').setOption(o2, true); bindDateChart('rSpread');
+
+    var relation = contractSpread == null ? '缺少可比月度综合价，不能形成价差观察。' :
+      '已入库日前月均' + (contractSpread >= 0 ? '高于' : '低于') + '月度综合价 ' + Math.abs(contractSpread).toFixed(2) + ' 元/MWh。';
+    var rtRelation = daRtSpread == null ? '日前或实时样本不足，无法计算两者月均差。' :
+      '日前历史月均' + (daRtSpread >= 0 ? '高于' : '低于') + '实时历史月均 ' + Math.abs(daRtSpread).toFixed(2) + ' 元/MWh。';
+    $('researchSignals').innerHTML = [
+      ['数据质量门槛', gateGood ? '覆盖率达到80%且无自动警告，可用于描述性统计。' : '存在覆盖不足或自动警告，仅供历史观察，不生成策略结论。', gateGood],
+      ['现货与合同关系', relation, null],
+      ['日前与实时关系', rtRelation, null],
+      ['月内波动', '日前日度总体标准差 ' + fmt(volatility) + '，极差 ' + fmt(range) + ' 元/MWh。', null]
+    ].map(function(s){ return '<div class="signal-card' + (s[0] === '数据质量门槛' ? ' gate-note' + (s[2] ? ' good' : '') : '') + '"><strong>' + s[0] + '</strong><p>' + s[1] + '</p></div>'; }).join('');
+
+    $('researchModules').innerHTML = [
+      ['现货价格预测','需要模型版本、训练窗口和回测记录'],['用户负荷预测','需要用户级负荷与气象数据'],
+      ['合同持仓分析','需要合同电量、分时曲线与偏差规则'],['策略约束引擎','需要风险偏好、限额和审批口径']
+    ].map(function(m){ return '<div class="module-row"><div><strong>' + m[0] + '</strong><span>' + m[1] + '</span></div><b class="module-state">未接入</b></div>'; }).join('');
+    $('researchMethod').innerHTML = '日前月均＝当前月非空日报日前发电侧均价的算术平均；实时月均＝按 <code>rt_date</code> 归属月份的非空实时发电侧均价算术平均；合同参考偏差＝日前月均－月度综合价；波动度＝日前日均价的总体标准差（除以 N）。这些指标均为历史描述，不是结算、预测或交易建议。';
+  }
+
   // ───────── 档案 ─────────
   function renderArchive(){
     var months = monthsOfDaily(); var cm = state.month || months[months.length - 1];
@@ -622,6 +696,7 @@ tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select
     if (state.tab === 'overview'){ renderDaily(); renderOverview(); }
     else if (state.tab === 'daily') renderDaily();
     else if (state.tab === 'monthly') renderMonthly();
+    else if (state.tab === 'research') renderResearch();
     else renderArchive();
     Object.keys(charts).forEach(function(k){ charts[k].resize(); });
     updateContext();
@@ -645,10 +720,10 @@ tr[data-select-date]{cursor:pointer}tr[data-select-date]:hover td,tr[data-select
     state.month = day.slice(0,7); state.day = day; render();
   }
   function navigate(tab){
-    if (['overview','daily','monthly','archive'].indexOf(tab) < 0) return;
+    if (['overview','daily','monthly','research','archive'].indexOf(tab) < 0) return;
     state.tab = tab;
     document.querySelectorAll('.tab').forEach(function(x){ if (x.dataset.tab === tab) x.setAttribute('aria-current','page'); else x.removeAttribute('aria-current'); });
-    ['overview','daily','monthly','archive'].forEach(function(n){ $('tab-' + n).classList.toggle('hidden', n !== tab); });
+    ['overview','daily','monthly','research','archive'].forEach(function(n){ $('tab-' + n).classList.toggle('hidden', n !== tab); });
     try { localStorage.setItem('gdtb-p2-tab', tab); } catch (e) {}
     render();
   }
